@@ -1,0 +1,108 @@
+#Region - include files
+; standard UDF's
+#include <ButtonConstants.au3>
+#include <ColorConstants.au3>
+#include <GuiComboBoxEx.au3>
+#include <GUIConstantsEx.au3>
+#include <WindowsConstants.au3>
+#include <Misc.au3>
+#include <Excel.au3>
+
+; non standard UDF's
+#include "wd_helper.au3"
+#include "wd_capabilities.au3"
+#EndRegion - include files
+
+
+$s=1
+While $s =1
+	autorun()
+	$s+=1
+WEnd
+
+Func autorun()
+
+SetupGecko()
+_WD_startup()
+
+
+;,{"prefs":{"download":{"prompt_for_download":False}}}}'
+Local $sSession = _WD_CreateSession()
+Local $sCherryTitle = "Etisalat's Cherry-Pick Application - Google Chrome"
+Local $sAgentTitle = "Agent Dashboard - Google Chrome"
+Local $sCherryURL = ""
+Local $sAgentURL = ""
+Local $sErrorPage = "Privacy error - Google Chrome"
+
+
+;minimize the driver and google chrome window
+$dPath1 = (@ScriptDir&"\chromedriver.exe")
+WinSetState ($dPath1,"",@SW_MINIMIZE)
+$dPath2 = ("Select "&@ScriptDir&"\chromedriver.exe")
+WinSetState ($dPath2,"",@SW_MINIMIZE)
+;_WD_Window($sSession,'MINIMIZE')
+
+
+_WD_Navigate($sSession, $sCherryURL)
+_WD_LoadWait($sSession, 2000)
+
+;WinWait($sCherryTitle)
+
+
+_WD_WaitElement($sSession,$_WD_LOCATOR_ByXPath,'//*[@id="ChatInteractionsTable"]')
+
+$sElement11 = _WD_FindElement($sSession,$_WD_LOCATOR_ByXPath,'//*[@id="agentTableDownload"]/div/button[1]')
+_WD_ElementAction($sSession,$sElement11,'click')
+
+
+
+
+
+
+EndFunc
+
+
+
+Func SetupGecko()
+	_WD_Option('Driver', 'geckodriver.exe')
+	_WD_Option('DriverParams', '--log trace')
+	_WD_Option('Port', 4444)
+
+
+;~ 	Local $sDesiredCapabilities = '{"capabilities": {"alwaysMatch": {"browserName": "firefox", "acceptInsecureCerts":true}}}'
+	_WD_CapabilitiesStartup()
+	_WD_CapabilitiesAdd('alwaysMatch', 'firefox')
+	_WD_CapabilitiesAdd('browserName', 'firefox')
+	_WD_CapabilitiesAdd('acceptInsecureCerts', True)
+	_WD_CapabilitiesAdd('headless',True)
+$sDesiredCapabilities = '{"capabilities":{"alwaysMatch": {"moz:firefoxOptions": {"args": ["--devtools"]}}}}'
+
+	;_WD_CapabilitiesAdd('prefs','browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream;application/xlsx')
+#comments-start
+FirefoxOptions options = new FirefoxOptions();
+options.addPreference("browser.download.dir", DOWNLOAD_PATH);
+options.addPreference("browser.download.folderList", 2);
+options.addPreference("browser.download.manager.showWhenStarting", false);
+options.addPreference("browser.helperApps.neverAsk.saveToDisk", "application/octet-stream;application/xlsx");
+WebDriver driver = new FirefoxDriver(options);
+
+			// 'headless',
+            "--disable-gpu",
+            // "--window-size=1280x1696", // Letter size'--no-sandbox',
+            "--user-data-dir=/tmp/user-data",
+            "--hide-scrollbars",
+            "--enable-logging",
+            "--log-level=0",
+            "--v=99",
+            "--single-process",
+            "--data-path=/tmp/data-path",
+            "--ignore-certificate-errors",
+            "--homedir=/tmp",
+            "--disk-cache-dir=/tmp/cache-dir",
+            "--start-maximized"
+	#comments-end
+
+	_WD_CapabilitiesDump(@ScriptLineNumber) ; dump current Capabilities setting to console - only for testing in this demo
+	Local $sDesiredCapabilities = _WD_CapabilitiesGet()
+	Return $sDesiredCapabilities
+EndFunc   ;==>SetupGecko

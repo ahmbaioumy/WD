@@ -1,0 +1,148 @@
+#Region - include files
+; standard UDF's
+#include <ButtonConstants.au3>
+#include <ColorConstants.au3>
+#include <GuiComboBoxEx.au3>
+#include <GUIConstantsEx.au3>
+#include <WindowsConstants.au3>
+#include <Misc.au3>
+#include <Excel.au3>
+
+; non standard UDF's
+#include "wd_helper.au3"
+#include "wd_capabilities.au3"
+#EndRegion - include files
+
+
+$s=1
+While $s =1
+	autorun()
+	$s+=1
+WEnd
+
+Func autorun()
+
+SetupChrome()
+_WD_startup()
+
+$sloginid = FileReadLine(@ScriptDir&"\Loginsid.txt")
+;Local $sDesiredCapabilities = '{"capabilities": {"alwaysMatch": {"goog:chromeOptions": {"w3c": true, "excludeSwitches": [ "enable-automation"],"prefs": ["download": "default_directory": "C:\SM"]}}}}'
+
+Local $sDesiredCapabilities = '{"capabilities":{"alwaysMatch": {"goog:chromeOptions": {"w3c": true, "prefs": {"download.default_directory": "C:\reports\"}}}}}'
+Local $sSession = _WD_CreateSession($sDesiredCapabilities)
+Local $sCherryTitle = "Etisalat's Cherry-Pick Application - Google Chrome"
+Local $sAgentTitle = "Agent Dashboard - Google Chrome"
+Local $sCherryURL = ""
+Local $sAgentURL = ""
+Local $sErrorPage = "Privacy error - Google Chrome"
+
+
+;minimize the driver and google chrome window
+$dPath1 = (@ScriptDir&"\chromedriver.exe")
+WinSetState ($dPath1,"",@SW_MINIMIZE)
+$dPath2 = ("Select "&@ScriptDir&"\chromedriver.exe")
+WinSetState ($dPath2,"",@SW_MINIMIZE)
+_WD_Window($sSession,'MINIMIZE')
+
+
+_WD_Navigate($sSession, $sCherryURL)
+_WD_LoadWait($sSession, 2000)
+
+WinWait($sCherryTitle)
+
+
+_WD_WaitElement($sSession,$_WD_LOCATOR_ByXPath,'//*[@id="ChatInteractionsTable"]')
+
+$sElement11 = _WD_FindElement($sSession,$_WD_LOCATOR_ByXPath,'//*[@id="agentTableDownload"]/div/button[1]')
+_WD_ElementAction($sSession,$sElement11,'click')
+
+
+#comments-start
+_ArrayToClip(_WD_GetTable($sSession,'//*[@id="ChatInteractionsTable"]'))
+
+Local $oExcel = _Excel_Open()
+    If @error Then Exit
+
+Local $oBook = _Excel_BookNew($oExcel)
+    If @error Then Exit
+
+$oExcel.ActiveSheet.Range("A1").select
+$oExcel.ActiveSheet.Paste
+
+Local $sFilePath = @ScriptDir & "\test.xlsx"
+
+_Excel_BookSaveAs($oBook, $sFilePath, Default, True)
+_Excel_BookClose($oBook)
+_Excel_Close($oExcel)
+WinClose("Excel")
+;ClipPut("")
+#comments-end
+;;;;;;;;;;;;;;Agent Status report
+
+_WD_Navigate($sSession, $sAgentURL)
+_WD_LoadWait($sSession, 2000)
+WinWait($sAgentTitle)
+_WD_WaitElement($sSession,$_WD_LOCATOR_ByXPath,'/html/body/div/section/div[1]/ul/li[4]/div/div[2]/span/div/button')
+$sElement1 = _WD_FindElement($sSession,$_WD_LOCATOR_ByXPath,'/html/body/div/section/div[1]/ul/li[4]/div/div[2]/span/div/ul/li[4]/a/label/input')
+_WD_ElementActionEx($sSession,$sElement1,'CHECK')
+$sElement2 = _WD_FindElement($sSession,$_WD_LOCATOR_ByXPath,'/html/body/div/section/div[1]/ul/li[4]/div/div[2]/span/div/ul/li[5]/a/label/input')
+_WD_ElementActionEx($sSession,$sElement2,'CHECK')
+$sElement3 = _WD_FindElement($sSession,$_WD_LOCATOR_ByXPath,'/html/body/div/section/div[1]/ul/li[4]/div/div[2]/span/div/ul/li[6]/a/label/input')
+_WD_ElementActionEx($sSession,$sElement3,'CHECK')
+$sElement4 = _WD_FindElement($sSession,$_WD_LOCATOR_ByXPath,'/html/body/div/section/div[1]/ul/li[4]/div/div[2]/span/div/ul/li[7]/a/label/input')
+_WD_ElementActionEx($sSession,$sElement4,'CHECK')
+Sleep(1000)
+
+
+$sElement6 = _WD_FindElement($sSession,$_WD_LOCATOR_ByXPath,'/html/body/div/section/div[1]/ul/li[11]/div/button')
+_WD_ElementAction($sSession,$sElement6,'click')
+
+_WD_LoadWait($sSession, 2000)
+_WD_WaitElement($sSession,$_WD_LOCATOR_ByXPath,'/html/body/div/section/div[2]/div[2]/table/tbody/tr[1]')
+
+$sElement5 = _WD_FindElement($sSession,$_WD_LOCATOR_ByXPath,'/html/body/div/section/div[2]/div[1]/div[3]/button')
+_WD_ElementAction($sSession,$sElement5,'click')
+
+
+#comments-start
+Sleep(1000)
+
+_ArrayToClip(_WD_GetTable($sSession,'//*[@id="tblAgentDetailsList"]'))
+
+Local $oExce2 = _Excel_Open()
+    If @error Then Exit
+
+Local $oBook = _Excel_BookNew($oExce2)
+    If @error Then Exit
+
+$oExce2.ActiveSheet.Range("A1").select
+$oExce2.ActiveSheet.Paste
+
+Local $sFilePath = @ScriptDir & "\Agent.xlsx"
+
+_Excel_BookSaveAs($oBook, $sFilePath, Default, True)
+_Excel_BookClose($oBook)
+_Excel_Close($oExce2)
+WinClose("Excel")
+#comments-end
+
+
+;_WD_DeleteSession($sSession)
+;_WD_shutdown()
+;__WD_CloseDriver()
+
+EndFunc
+Func SetupChrome()
+	_WD_Option('Driver', 'chromedriver.exe')
+	_WD_Option('Port', 9515)
+	_WD_Option('DriverParams', '--verbose --log-path-"C:\repots\chrome.log"')
+;~ 	Local $sDesiredCapabilities = '{"capabilities": {"alwaysMatch": {"goog:chromeOptions": {"w3c": true, "excludeSwitches": [ "enable-automation"]}}}}'
+	_WD_CapabilitiesStartup()
+	_WD_CapabilitiesAdd('alwaysMatch', 'chrome')
+	_WD_CapabilitiesAdd('w3c', True)
+	_WD_CapabilitiesAdd('excludeSwitches', 'enable-automation')
+	;_WD_Option('DriverParams', '--whitelisted-ips=""' )
+	_WD_CapabilitiesDump(@ScriptLineNumber) ; dump current Capabilities setting to console - only for testing in this demo
+	Local $sDesiredCapabilities = _WD_CapabilitiesGet()
+	Return $sDesiredCapabilities
+EndFunc   ;==>SetupChrome
